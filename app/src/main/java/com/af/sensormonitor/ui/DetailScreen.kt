@@ -35,6 +35,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -253,10 +254,13 @@ private fun MetaTable(entry: SensorEntry, snap: EntrySnapshot) {
             Access.BODY -> "BODY SENSORS (NOT REQUESTED)"
         },
     )
+    // Wide enough for the longest label ("ADDITIONAL INFO") at the system font size.
+    val labelWidth = 128.dp * LocalDensity.current.fontScale
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         for ((k, v) in rows) {
             Row {
-                Text(k, color = p.dim, fontSize = 12.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.width(128.dp))
+                Text(k, color = p.dim, fontSize = 12.sp, fontFamily = FontFamily.Monospace, maxLines = 1, softWrap = false,
+                    modifier = Modifier.width(labelWidth))
                 Text(v, color = p.text, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
             }
         }

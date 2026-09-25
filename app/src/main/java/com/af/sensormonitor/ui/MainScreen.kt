@@ -93,7 +93,11 @@ fun MainScreen(
         Header(arrangement, held, excited, onToggleHold, onSettings)
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
             val fontScale = LocalDensity.current.fontScale
-            val layout = GaugeLayoutCalc.compute(visible.size, maxWidth.value, maxHeight.value, fontScale)
+            val density = LocalDensity.current.density
+            // Whole pixels per row: fractional rows would round up one by one and push the last row out.
+            val layout = GaugeLayoutCalc.compute(visible.size, maxWidth.value, maxHeight.value, fontScale).let {
+                it.copy(rowHeight = kotlin.math.floor(it.rowHeight * density) / density)
+            }
             if (BuildConfig.DEBUG) {
                 LaunchedEffect(layout, visible.size) {
                     Log.i("AFSensorMonitor", "layout count=${visible.size} area=${maxWidth.value}x${maxHeight.value}dp " +
@@ -205,6 +209,8 @@ private fun GaugeRow(
             rowText(entry, snap, p),
             Modifier.padding(start = indicatorWidth + 2.dp, end = 4.dp),
             fontSize = fontSize, lineHeight = fontSize, fontFamily = FontFamily.Monospace,
+            // The column widths assume plain monospace advances (the default text style adds letter spacing).
+            letterSpacing = 0.sp,
             maxLines = 1, softWrap = false, color = p.text,
         )
     }

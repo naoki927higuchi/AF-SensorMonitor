@@ -20,7 +20,8 @@ object GaugeLayoutCalc {
     const val MIN_COLUMN_WIDTH = 330f
     /** Characters in one row: name 12, wake mark 2, gap, 3 fields of 7 with gaps, gap, unit 5. */
     const val ROW_CHARS = 44
-    const val CHAR_WIDTH_EM = 0.6f
+    /** Monospace advance (0.6 em) plus a small margin for fonts that are slightly wider. */
+    const val CHAR_WIDTH_EM = 0.62f
     const val FONT_PER_ROW = 0.72f
     const val HORIZONTAL_PADDING = 8f
 
