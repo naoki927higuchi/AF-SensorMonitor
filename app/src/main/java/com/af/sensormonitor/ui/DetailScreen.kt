@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.af.sensormonitor.export.InventoryCollector
 import com.af.sensormonitor.sensor.Access
+import com.af.sensormonitor.sensor.AngleSeries
 import com.af.sensormonitor.sensor.EntrySnapshot
 import com.af.sensormonitor.sensor.History
 import com.af.sensormonitor.sensor.HistorySnapshot
@@ -109,15 +110,43 @@ fun DetailScreen(entry: SensorEntry, onBack: () -> Unit, onPermissionResult: () 
                 entry.sensor.reportingMode == android.hardware.Sensor.REPORTING_MODE_ON_CHANGE -> GraphStyle.STEP
                 else -> GraphStyle.LINE
             }
-            SensorGraph(
-                data = data,
-                endNanos = now,
-                windowNanos = History.HISTORY_NS,
-                channels = graphChannels(entry, data.channels),
-                style = style,
-                decimals = entry.info.decimals + 1,
-                modifier = Modifier.fillMaxWidth().height(220.dp).border(1.dp, p.faint),
-            )
+            if (AngleSeries.isAngular(entry.info.kind)) {
+                // Azimuth on a PPI-style scope (no 0/360 jump); the other angles on the time graph.
+                val split = remember(data) { AngleSeries.split(entry.info, data) }
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    AzimuthScope(
+                        data = split.azimuth,
+                        endNanos = now,
+                        windowNanos = History.HISTORY_NS,
+                        northUp = entry.sensor.type != android.hardware.Sensor.TYPE_GAME_ROTATION_VECTOR,
+                        modifier = Modifier.size(280.dp),
+                    )
+                }
+                if (split.others.channels > 0) {
+                    Spacer(Modifier.height(8.dp))
+                    SensorGraph(
+                        data = split.others,
+                        endNanos = now,
+                        windowNanos = History.HISTORY_NS,
+                        channels = split.others.channels,
+                        style = style,
+                        decimals = 1,
+                        modifier = Modifier.fillMaxWidth().height(160.dp).border(1.dp, p.faint),
+                        wrapDegrees = true,
+                        colorOffset = 1,
+                    )
+                }
+            } else {
+                SensorGraph(
+                    data = data,
+                    endNanos = now,
+                    windowNanos = History.HISTORY_NS,
+                    channels = graphChannels(entry, data.channels),
+                    style = style,
+                    decimals = entry.info.decimals + 1,
+                    modifier = Modifier.fillMaxWidth().height(220.dp).border(1.dp, p.faint),
+                )
+            }
             Spacer(Modifier.height(12.dp))
             MetaTable(entry, snap)
             Spacer(Modifier.height(16.dp))
@@ -163,17 +192,20 @@ private fun ValueList(entry: SensorEntry, snap: EntrySnapshot) {
     val rows = ArrayList<Triple<Color?, String, String>>()
     if (entry.info.kind == ValueKind.ROTATION && snap.count >= 3) {
         val a = ValueFormat.rotationAngles(snap.values, snap.count)
-        listOf("AZIMUTH", "PITCH", "ROLL").forEachIndexed { i, l -> rows += Triple(null, l, ValueFormat.number(a[i], 1, 10, false) + " °") }
+        listOf("AZIMUTH", "PITCH", "ROLL").forEachIndexed { i, l ->
+            rows += Triple(p.channels[i], l, ValueFormat.number(a[i], 2, 10, false) + " °")
+        }
     }
     if (entry.info.kind == ValueKind.PROXIMITY && snap.count > 0) {
         rows += Triple(null, "STATE", if (ValueFormat.isNear(snap.values[0], entry.sensor.maximumRange)) "NEAR" else "FAR")
     }
     if (entry.info.kind == ValueKind.EVENT || entry.isOneShot) rows += Triple(null, "EVENTS", snap.events.toString())
-    val plotted = graphChannels(entry, snap.count)
+    // Rotation vectors are drawn as the derived angles above, not as raw quaternion channels.
+    val plotted = if (entry.info.kind == ValueKind.ROTATION) 0 else graphChannels(entry, snap.count)
     for (i in 0 until snap.count) {
         val color = if (i < plotted) p.channels[i % p.channels.size] else null
         val unit = if (entry.info.kind == ValueKind.ROTATION || entry.info.unit.isEmpty()) "" else " " + entry.info.unit
-        rows += Triple(color, SensorCatalog.channelLabel(entry.info, i), ValueFormat.number(snap.values[i], entry.info.decimals + 2, 12) + unit)
+        rows += Triple(color, SensorCatalog.channelLabel(entry.info, i), ValueFormat.number(snap.values[i], entry.info.decimals + 2, 12, plus = entry.info.kind != ValueKind.ANGLES) + unit)
     }
     if (rows.isEmpty()) {
         Text("NO DATA", color = p.dim, fontSize = 14.sp, fontFamily = FontFamily.Monospace)

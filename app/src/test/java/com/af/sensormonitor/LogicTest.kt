@@ -6,6 +6,8 @@ import com.af.sensormonitor.export.InventoryFormat
 import com.af.sensormonitor.export.JsonWriter
 import com.af.sensormonitor.export.SensorRecord
 import com.af.sensormonitor.sensor.ActivityDetector
+import com.af.sensormonitor.sensor.AngleSeries
+import com.af.sensormonitor.sensor.HistorySnapshot
 import com.af.sensormonitor.sensor.History
 import com.af.sensormonitor.sensor.Indicator
 import com.af.sensormonitor.sensor.SensorCatalog
@@ -68,6 +70,29 @@ class ActivityDetectorTest {
         run(d, 3.0, 4.0, shake)
         val after4s = run(d, 7.0, 1.0, shake)
         assertTrue("reactions 4 s into shaking: $after4s", after4s > 10)
+    }
+
+    @Test
+    fun highRateSensorReactsLikeFiftyHertz() {
+        // The same motion (3 m/s² at 2 Hz) over sensor noise, delivered at 500 Hz and at 50 Hz.
+        fun hits(rateHz: Int): Int {
+            val rnd = Random(5)
+            val d = ActivityDetector(floor = 0.06f, decayOverGaps = false)
+            val step = 1_000_000_000L / rateHz
+            var count = 0
+            for (i in 0 until rateHz * 12) {
+                val t = i * step
+                val s = t / 1e9
+                val motion = if (s >= 8.0) 3 * sin(s * 2 * Math.PI * 2) else 0.0
+                val v = floatArrayOf((motion + rnd.nextGaussian() * 0.02).toFloat())
+                if (d.update(v, 1, t) > 0f && s >= 8.0) count++
+            }
+            return count
+        }
+        val slow = hits(50)
+        val fast = hits(500)
+        assertTrue("50 Hz reactions: $slow", slow > 20)
+        assertTrue("500 Hz reactions: $fast", fast > 20)
     }
 
     @Test
@@ -174,6 +199,35 @@ class FormatTest {
     fun proximity() {
         assertTrue(ValueFormat.isNear(0f, 5f))
         assertFalse(ValueFormat.isNear(5f, 5f))
+    }
+}
+
+class AngleSeriesTest {
+    @Test
+    fun angularDistanceWraps() {
+        assertEquals(2f, AngleSeries.angularDistance(359f, 1f), 1e-4f)
+        assertEquals(180f, AngleSeries.angularDistance(0f, 180f), 1e-4f)
+        assertEquals(10f, AngleSeries.angularDistance(-5f, 5f), 1e-4f)
+    }
+
+    @Test
+    fun rotationHistoryBecomesAzimuthPitchRoll() {
+        val s = Math.sqrt(0.5).toFloat()
+        val data = HistorySnapshot(longArrayOf(1L, 2L), floatArrayOf(0f, 0f, 0f, 1f, 0f, 0f, 0f, s, s, 0f), 2, 5)
+        val split = AngleSeries.split(SensorCatalog.info(11, "android.sensor.rotation_vector", "r"), data)
+        assertEquals(1, split.azimuth.channels)
+        assertEquals(0f, split.azimuth.value(0, 0), 1e-3f)
+        assertEquals(270f, split.azimuth.value(1, 0), 1e-2f)
+        assertEquals(listOf("PITCH", "ROLL"), split.otherLabels)
+    }
+
+    @Test
+    fun orientationChannelsAreSplit() {
+        val data = HistorySnapshot(longArrayOf(1L), floatArrayOf(350f, -10f, 20f), 1, 3)
+        val split = AngleSeries.split(SensorCatalog.info(3, "android.sensor.orientation", "o"), data)
+        assertEquals(350f, split.azimuth.value(0, 0), 0f)
+        assertEquals(2, split.others.channels)
+        assertEquals(20f, split.others.value(0, 1), 0f)
     }
 }
 

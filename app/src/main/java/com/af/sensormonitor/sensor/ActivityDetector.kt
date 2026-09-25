@@ -15,6 +15,9 @@ import kotlin.math.min
  * second, while continuous shaking stays visible for many seconds before it becomes the new normal. [floor] is
  * the smallest change that counts at all, so a perfectly quiet or quantized sensor does not react to its last
  * digit. Averaging the activity keeps single noisy samples from looking like a reaction.
+ *
+ * Changes are measured between samples at least [STEP_NS] apart, so a sensor delivering 500 Hz is judged like
+ * one delivering 50 Hz (per-sample changes shrink with the rate, the sensor noise does not).
  */
 class ActivityDetector(
     private val floor: Float,
@@ -43,7 +46,8 @@ class ActivityDetector(
             started = true
             return 0f
         }
-        val dt = max(0L, tNanos - lastT) / 1e9f
+        if (tNanos - lastT < STEP_NS) return 0f
+        val dt = (tNanos - lastT) / 1e9f
         lastT = tNanos
         val aActivity = 1f - exp(-dt / TAU_ACTIVITY_S)
         val aDown = 1f - exp(-dt / TAU_DOWN_S)
@@ -69,6 +73,8 @@ class ActivityDetector(
         const val TAU_DOWN_S = 0.6f
         const val TAU_UP_S = 30f
         const val WARMUP_NS = 1_000_000_000L
+        /** Minimum spacing of the compared samples (about 50 Hz). */
+        const val STEP_NS = 18_000_000L
         const val THRESHOLD = 5f
         const val MIN_LEVEL = 0.35f
 

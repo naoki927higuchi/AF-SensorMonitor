@@ -56,6 +56,10 @@ fun SensorGraph(
     style: GraphStyle,
     decimals: Int,
     modifier: Modifier = Modifier,
+    /** Angles in degrees: do not connect samples more than 180 degrees apart (0 / 360 wrap-around). */
+    wrapDegrees: Boolean = false,
+    /** First palette color to use (to match the value list). */
+    colorOffset: Int = 0,
 ) {
     val p = LocalPalette.current
     val range = remember { AutoRange() }
@@ -108,22 +112,101 @@ fun SensorGraph(
             val path = Path()
             var started = false
             var lastY = 0f
+            var lastV = 0f
             for (i in 0 until n) {
                 val v = data.value(i, c)
                 if (!v.isFinite()) continue
                 val px = x(data.times[i])
                 val py = y(v)
-                if (!started) { path.moveTo(px, py); started = true }
+                if (!started || (wrapDegrees && abs(v - lastV) > 180f)) { path.moveTo(px, py); started = true }
                 else {
                     if (style == GraphStyle.STEP) path.lineTo(px, lastY)
                     path.lineTo(px, py)
                 }
                 lastY = py
+                lastV = v
             }
             if (!started) continue
             // Hold the last value up to "now" (sensors that report only on change are silent while steady).
             path.lineTo(w, lastY)
-            drawPath(path, p.channels[c % p.channels.size], style = stroke)
+            drawPath(path, p.channels[(c + colorOffset) % p.channels.size], style = stroke)
+        }
+    }
+}
+
+/**
+ * PPI-style scope for an azimuth: the angle is the direction (clockwise from the top), the radius is time
+ * (outer ring = now, center = [windowNanos] ago). Crossing north needs no special handling. [northUp] labels the
+ * top "N" (absolute heading) or "0°" (relative, e.g. game rotation vector).
+ */
+@Composable
+fun AzimuthScope(
+    data: HistorySnapshot,
+    endNanos: Long,
+    windowNanos: Long,
+    northUp: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val p = LocalPalette.current
+    val measurer = rememberTextMeasurer()
+    val labelStyle = TextStyle(color = p.dim, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+    Canvas(modifier) {
+        val c = center
+        val labelRoom = 16.sp.toPx()
+        val radius = minOf(size.width, size.height) / 2f - labelRoom
+        // Time rings every 5 s and the four directions.
+        val seconds = (windowNanos / 1_000_000_000L).toInt()
+        for (s in 0 until seconds step 5) {
+            val r = radius * (1f - s * 1e9f / windowNanos)
+            drawCircle(if (s == 0) p.dim else p.faint, r, c, style = Stroke(if (s == 0) 2f else 1f))
+        }
+        for (k in 0 until 12) {
+            val a = Math.toRadians(k * 30.0)
+            val inner = if (k % 3 == 0) 0f else radius * 0.92f
+            drawLine(p.faint, c + Offset((inner * kotlin.math.sin(a)).toFloat(), (-inner * kotlin.math.cos(a)).toFloat()),
+                c + Offset((radius * kotlin.math.sin(a)).toFloat(), (-radius * kotlin.math.cos(a)).toFloat()), 1f)
+        }
+        val labels = if (northUp) listOf("N", "E", "S", "W") else listOf("0°", "90°", "180°", "270°")
+        labels.forEachIndexed { k, text ->
+            val layout = measurer.measure(text, labelStyle)
+            val a = Math.toRadians(k * 90.0)
+            val r = radius + labelRoom * 0.55f
+            val px = c.x + (r * kotlin.math.sin(a)).toFloat() - layout.size.width / 2f
+            val py = c.y - (r * kotlin.math.cos(a)).toFloat() - layout.size.height / 2f
+            drawText(layout, topLeft = Offset(px, py))
+        }
+
+        val n = data.size
+        if (n == 0 || data.channels == 0) return@Canvas
+        val start = endNanos - windowNanos
+        val color = p.channels[0]
+        fun point(i: Int): Offset? {
+            val v = data.value(i, 0)
+            if (!v.isFinite() || data.times[i] < start) return null
+            val r = radius * ((data.times[i] - start).toFloat() / windowNanos)
+            val a = Math.toRadians(v.toDouble())
+            return c + Offset((r * kotlin.math.sin(a)).toFloat(), (-r * kotlin.math.cos(a)).toFloat())
+        }
+        var prev: Offset? = null
+        var prevV = 0f
+        for (i in 0 until n) {
+            val pt = point(i)
+            val v = data.value(i, 0)
+            // A large jump (e.g. near pitch ±90°) would draw a chord across the scope; start a new stroke instead.
+            if (pt != null && prev != null && com.af.sensormonitor.sensor.AngleSeries.angularDistance(v, prevV) <= 60f) {
+                val age = (endNanos - data.times[i]).toFloat() / windowNanos
+                drawLine(color.copy(alpha = 1f - 0.75f * age), prev, pt, 3f)
+            }
+            prev = pt
+            if (pt != null) prevV = v
+        }
+        // Current direction.
+        val last = data.value(n - 1, 0)
+        if (last.isFinite()) {
+            val a = Math.toRadians(last.toDouble())
+            val tip = c + Offset((radius * kotlin.math.sin(a)).toFloat(), (-radius * kotlin.math.cos(a)).toFloat())
+            drawLine(color, c, tip, 2f)
+            drawCircle(color, 6f, tip)
         }
     }
 }
