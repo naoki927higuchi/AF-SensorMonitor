@@ -1,0 +1,22 @@
+# Gradle / Android Studio
+.gradle/
+/build/
+/app/build/
+/local.properties
+/.idea/
+*.iml
+.kotlin/
+captures/
+
+# Release APKs and build logs (not source)
+/bin/
+/Builds/
+
+# Secrets / local
+/.local/
+*.keystore
+*.jks
+
+# Development ZIPs
+*.zip
+!/Distribution/*.zip
