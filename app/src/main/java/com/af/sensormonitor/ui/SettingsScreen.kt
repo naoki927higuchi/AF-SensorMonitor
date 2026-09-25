@@ -118,7 +118,7 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    MascotBadge(28.dp, excited = false)
+                    MascotBadge(40.dp, excited = false, quiet = false)
                     Spacer(Modifier.width(8.dp))
                     Text("AF-SensorMonitor ${BuildConfig.VERSION_NAME}", color = p.dim, fontSize = 12.sp,
                         fontFamily = FontFamily.Monospace)

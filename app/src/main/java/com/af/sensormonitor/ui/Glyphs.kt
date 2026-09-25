@@ -1,6 +1,7 @@
 package com.af.sensormonitor.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -13,7 +14,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
+import com.af.sensormonitor.R
 import com.af.sensormonitor.sensor.Status
 import kotlin.math.min
 
@@ -81,21 +84,15 @@ fun BackIcon(size: Dp, color: Color, modifier: Modifier = Modifier) {
 }
 
 /**
- * Mascot slot (placeholder drawing until the artwork is supplied). [excited] when many sensors react at once.
- * It stays small and outside the gauge rows so it never covers a value.
+ * The mascot (Kuro-san, user-provided artwork): dimmed while the sensors are quiet, surprised when many sensors
+ * react at once. It stays small and outside the gauge rows so it never covers a value.
  */
 @Composable
-fun MascotBadge(size: Dp, excited: Boolean, modifier: Modifier = Modifier) {
-    val palette = LocalPalette.current
-    Canvas(modifier.size(size)) {
-        val s = this.size.width
-        val body = if (excited) palette.active else palette.dim
-        drawRoundRect(body, Offset(s * 0.08f, s * 0.12f), Size(s * 0.84f, s * 0.8f), CornerRadius(s * 0.28f))
-        val eye = palette.background
-        val eyeR = s * (if (excited) 0.1f else 0.075f)
-        drawCircle(eye, eyeR, Offset(s * 0.36f, s * 0.44f))
-        drawCircle(eye, eyeR, Offset(s * 0.64f, s * 0.44f))
-        if (excited) drawCircle(eye, s * 0.08f, Offset(s * 0.5f, s * 0.7f))
-        else drawLine(eye, Offset(s * 0.4f, s * 0.7f), Offset(s * 0.6f, s * 0.7f), s * 0.06f, StrokeCap.Round)
+fun MascotBadge(size: Dp, excited: Boolean, modifier: Modifier = Modifier, quiet: Boolean = !excited) {
+    val id = when {
+        excited -> R.drawable.kuro_reacting
+        quiet -> R.drawable.kuro_quiet
+        else -> R.drawable.kuro_normal
     }
+    Image(painterResource(id), contentDescription = null, modifier = modifier.size(size))
 }

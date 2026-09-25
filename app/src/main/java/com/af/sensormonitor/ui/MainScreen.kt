@@ -149,7 +149,7 @@ private fun Header(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        MascotBadge(20.dp, excited)
+        MascotBadge(28.dp, excited)
         Text("AF-SensorMonitor", color = p.text, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         Text(
             "${Build.MODEL}  ${arrangement.visible.size}/${arrangement.all.size}",
