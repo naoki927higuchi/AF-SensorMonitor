@@ -14,10 +14,10 @@
 | Android APK出力 | `bin/Android/Release-<Version>/AF-SensorMonitor-<Version>.apk`（`Build-Android.ps1`、SHA256を同じ場所に出力） |
 | 署名 | ローカル実機インストール用の専用鍵 `.local/android-signing/`（DPAPIで暗号化したパスワード。Git管理外） |
 | 検証方法 | `gradlew testDebugUnitTest`（反応判定・名前・キー・書式・配置・Export）。Build-Android.ps1 が単体テストと署名検証を行う。実機確認はRelease APKで行う |
-| 公開先 | 未定（APKは配布しない。GitHub公開はユーザー指示時のみ） |
+| 公開先 | GitHub `naoki927higuchi/AF-SensorMonitor`（Public、2026-09-29 ユーザー指示）。ソースのみでAPKは配布しない |
 | 利用者が別途用意するランタイム・外部ツール | なし |
-| 製品ライセンス | 公開時に決定（出発点は共通規約の既定のライセンス方針） |
-| 第三者ライセンス表記 | 公開時に決定。同梱ライブラリ：AndroidX / Jetpack Compose（Apache-2.0）、sh.calvin.reorderable（Apache-2.0） |
+| 製品ライセンス | 既定のライセンス方針を適用（2026-09-29）：ソースコードはMIT（`LICENSE`）、作者の素材はCC BY 4.0、ブランド素材（名称・アプリアイコン・マスコット・`Reference/UserProvided/`の原本）は許諾しない（`LICENSE-ASSETS.md`） |
+| 第三者ライセンス表記 | `LICENSE-ASSETS.md` に記載：AndroidX / Jetpack Compose（Apache-2.0）、sh.calvin.reorderable（Apache-2.0）、Gradle Wrapper（Apache-2.0）。APKを配布しないため、アプリ内の表記は設けない |
 
 ## 製品の設計方針（1.0.0企画で確定、本プロジェクトのみに適用）
 

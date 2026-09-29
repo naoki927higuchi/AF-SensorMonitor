@@ -38,4 +38,12 @@ Android端末がOS経由で公開しているセンサーをすべて列挙し�
 
 単体テスト → Release APK（R8、署名、`apksigner verify`）→ `bin/Android/Release-<Version>/AF-SensorMonitor-<Version>.apk` と `.sha256`。署名鍵は初回に `.local/android-signing/` へ作られる（Git管理外）。JDKは Android Studio 同梱の jbr、SDKは `%LOCALAPPDATA%\Android\Sdk`（`local.properties` はGit管理外）。
 
+APKは配布していない（GitHub Releasesにも置かない）。使う場合はソースから各自でビルドする。
+
+## ライセンス
+
+- ソースコードは [MIT License](LICENSE)（Copyright (c) 2026 af）。参照・改変・商用利用を含め自由に使えます。
+- コード以外の素材は [LICENSE-ASSETS.md](LICENSE-ASSETS.md)。作者が作った素材は CC BY 4.0 です。ただし、製品名・ブログ名、アプリアイコン、マスコット（クロさん）などのブランド素材は許諾していません。複製・改変したものを公開する場合は差し替えてください。
+- AndroidX・Jetpack Compose など第三者のものは、それぞれのライセンスに従います。
+
 規約は [AGENTS.md](AGENTS.md)、変更履歴は [HISTORY.md](HISTORY.md)。
